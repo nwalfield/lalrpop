@@ -1,0 +1,32 @@
+grammar;
+
+pub Email : String = {
+    <local_part:DotAtom> "@" <domain_part:DotAtom> => {
+        eprintln!("Email: local_part @ domain_part");
+
+        let mut s = String::new();
+        s.push_str(&local_part);
+        s.push('@');
+        s.push_str(&domain_part);
+        s
+    },
+
+    <e:!> => {
+        eprintln!("Email: error recovery");
+
+        match e {
+            lalrpop_util::ErrorRecovery { error, dropped_tokens } => {
+                eprintln!("Parse error: {:?}", error);
+                let s = String::from("INVALID:");
+                let s = dropped_tokens.into_iter()
+                    .fold(s, |mut s, (_, t, _)| {
+                        s.push_str(&t.to_string());
+                        s
+                    });
+                s
+            }
+        }
+    }
+};
+
+DotAtom : String = <s:r"[0-9a-zA-Z.]+"> => s.to_string();

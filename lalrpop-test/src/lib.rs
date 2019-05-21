@@ -91,6 +91,7 @@ lalrpop_mod!(error_issue_113);
 
 /// Test error recovery
 lalrpop_mod!(error_recovery);
+lalrpop_mod!(error_recovery_tokens);
 lalrpop_mod!(error_recovery_pull_182);
 lalrpop_mod!(error_recovery_issue_240);
 lalrpop_mod!(error_recovery_lalr_loop);
@@ -588,6 +589,19 @@ fn error_recovery_multiple_extra_tokens() {
             dropped_tokens: vec![((), Tok::Plus, ()), ((), Tok::Plus, ())],
         }
     );
+}
+
+#[test]
+fn error_recovery_tokens_token() {
+    assert_eq!(
+        error_recovery_tokens::EmailParser::new()
+            .parse("foo@example.org").unwrap(),
+        "foo@example.org");
+
+    assert_eq!(
+        error_recovery_tokens::EmailParser::new()
+            .parse("foo@example.org@bar.com").unwrap(),
+        "INVALID:foo@example.org@bar.com");
 }
 
 #[test]
