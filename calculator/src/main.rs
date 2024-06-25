@@ -1,7 +1,15 @@
-#[macro_use]
-extern crate lalrpop_util;
+use lalrpop_util::lalrpop_mod;
 
-lalrpop_mod!(pub calculator1); // syntesized by LALRPOP
+macro_rules! lalrpop_mod_doc {
+    ($vis:vis $name:ident) => {
+        lalrpop_util::lalrpop_mod!(
+            #[allow(clippy::ptr_arg)]
+            #[allow(clippy::vec_box)]
+            $vis $name);
+    }
+}
+
+lalrpop_mod_doc!(pub calculator1); // synthesized by LALRPOP
 
 #[test]
 fn calculator1() {
@@ -11,7 +19,7 @@ fn calculator1() {
     assert!(calculator1::TermParser::new().parse("((22)").is_err());
 }
 
-lalrpop_mod!(pub calculator2);
+lalrpop_mod_doc!(pub calculator2);
 
 #[test]
 fn calculator2() {
@@ -21,7 +29,7 @@ fn calculator2() {
     assert!(calculator2::TermParser::new().parse("((22)").is_err());
 }
 
-lalrpop_mod!(pub calculator2b);
+lalrpop_mod_doc!(pub calculator2b);
 
 #[test]
 fn calculator2b() {
@@ -38,7 +46,7 @@ fn calculator2b() {
     assert_eq!(result, "222");
 }
 
-lalrpop_mod!(pub calculator3);
+lalrpop_mod_doc!(pub calculator3);
 
 #[cfg_attr(not(test), allow(unused_macros))]
 macro_rules! test3 {
@@ -62,8 +70,8 @@ fn calculator3() {
     test3!(22 * (44 + 66) / 3);
 }
 
-lalrpop_mod!(pub calculator4);
-pub mod ast;
+lalrpop_mod_doc!(pub calculator4);
+mod ast;
 
 #[test]
 fn calculator4() {
@@ -73,7 +81,7 @@ fn calculator4() {
     assert_eq!(&format!("{:?}", expr), "((22 * 44) + 66)");
 }
 
-lalrpop_mod!(pub calculator5);
+lalrpop_mod_doc!(pub calculator5);
 
 #[test]
 fn calculator5() {
@@ -101,28 +109,90 @@ fn calculator5() {
     assert_eq!(&format!("{:?}", expr), "[((22 * 44) + 66), (13 * 3)]");
 }
 
-lalrpop_mod!(pub calculator6);
+lalrpop_mod_doc!(pub calculator6);
 
 #[test]
 fn calculator6() {
+    // Number is one bigger than std::i32::MAX
+    let expr = calculator6::ExprsParser::new().parse("2147483648");
+    assert!(expr.is_err());
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum Calculator6Error {
+    InputTooBig,
+    OddNumber,
+}
+
+lalrpop_mod_doc!(pub calculator6b);
+
+#[test]
+fn calculator6b() {
+    use lalrpop_util::ParseError;
+
+    let expr = calculator6b::ExprsParser::new().parse("2147483648");
+    assert!(expr.is_err());
+    assert_eq!(
+        expr.unwrap_err(),
+        ParseError::User {
+            error: Calculator6Error::InputTooBig
+        }
+    );
+
+    let expr = calculator6b::ExprsParser::new().parse("3");
+    assert!(expr.is_err());
+    assert_eq!(
+        expr.unwrap_err(),
+        ParseError::User {
+            error: Calculator6Error::OddNumber
+        }
+    );
+}
+
+lalrpop_mod_doc!(pub calculator7);
+
+#[test]
+fn calculator7() {
     let mut errors = Vec::new();
 
-    let expr = calculator6::ExprsParser::new()
+    let expr = calculator7::ExprsParser::new()
         .parse(&mut errors, "22 * + 3")
         .unwrap();
     assert_eq!(&format!("{:?}", expr), "[((22 * error) + 3)]");
 
-    let expr = calculator6::ExprsParser::new()
+    let expr = calculator7::ExprsParser::new()
         .parse(&mut errors, "22 * 44 + 66, *3")
         .unwrap();
     assert_eq!(&format!("{:?}", expr), "[((22 * 44) + 66), (error * 3)]");
 
-    let expr = calculator6::ExprsParser::new()
+    let expr = calculator7::ExprsParser::new()
         .parse(&mut errors, "*")
         .unwrap();
     assert_eq!(&format!("{:?}", expr), "[(error * error)]");
 
     assert_eq!(errors.len(), 4);
+}
+
+lalrpop_mod_doc!(pub calculator8);
+
+#[test]
+fn calculator8() {
+    let scale = 2;
+    let expr = calculator8::ExprParser::new()
+        .parse(scale, "11 * 22 + 33")
+        .unwrap();
+    assert_eq!(&format!("{:?}", expr), "((22 * 44) + 66)");
+}
+
+lalrpop_mod_doc!(pub calculator9);
+pub mod tok9;
+
+#[test]
+fn calculator9() {
+    let input = "22 * pi + 66";
+    let lexer = crate::tok9::Lexer::new(input);
+    let expr = calculator9::ExprParser::new().parse(input, lexer).unwrap();
+    assert_eq!(&format!("{:?}", expr), "((\"22\" * \"pi\") + \"66\")");
 }
 
 #[cfg(not(test))]
